@@ -19,7 +19,7 @@ struct MPCPadCard: View {
                    action: {
                        guard pad.hasSample else { return }
                        tapFlash = true
-                       AudioEngineService.shared.triggerPad(pad.id)
+                       // Audio functionality removed - ready for new implementation
                    })
                 .contentShape(Rectangle())
                 .allowsHitTesting(!isEditing)   // 🔑 disable touch on front when editing
