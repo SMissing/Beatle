@@ -15,9 +15,22 @@
 		893B23732EAA8A1600B959D9 /* Beatle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Beatle.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		89E4A72E2EABDA68006A78A0 /* Exceptions for "Beatle" folder in "Beatle" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 893B23722EAA8A1600B959D9 /* Beatle */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		893B23752EAA8A1600B959D9 /* Beatle */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				89E4A72E2EABDA68006A78A0 /* Exceptions for "Beatle" folder in "Beatle" target */,
+			);
 			path = Beatle;
 			sourceTree = "<group>";
 		};
@@ -270,8 +283,10 @@
 				DEVELOPMENT_TEAM = 68BRDN48L3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Beatle/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Beatle;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_NSAppleMusicUsageDescription = "For loading samples";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Beatle uses the mic for audio input";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -306,8 +321,10 @@
 				DEVELOPMENT_TEAM = 68BRDN48L3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Beatle/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Beatle;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_NSAppleMusicUsageDescription = "For loading samples";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Beatle uses the mic for audio input";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

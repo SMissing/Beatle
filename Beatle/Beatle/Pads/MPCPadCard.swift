@@ -8,7 +8,6 @@ struct MPCPadCard: View {
     let size: CGFloat
     let isEditing: Bool
     @State private var showPicker = false
-    @State private var tapFlash = false
 
     var body: some View {
         ZStack {
@@ -17,29 +16,24 @@ struct MPCPadCard: View {
                    accent: pad.accent,
                    isActive: pad.hasSample,
                    action: {
-                       guard pad.hasSample else { return }
-                       tapFlash = true
-                       // Audio functionality removed - ready for new implementation
+                       print("🎯 PAD PRESSED: Pad \(pad.id) tapped")
+                       print("🎯 PAD STATE: hasSample=\(pad.hasSample), storedURL=\(pad.storedURL?.lastPathComponent ?? "nil")")
+                       guard pad.hasSample else { 
+                           print("❌ PAD PRESSED: No sample loaded for pad \(pad.id)")
+                           return 
+                       }
+                       print("✅ PAD PRESSED: Sample exists, triggering audio...")
+                       AudioEngineService.shared.triggerPad(pad.id)
                    })
                 .contentShape(Rectangle())
                 .allowsHitTesting(!isEditing)   // 🔑 disable touch on front when editing
                 .zIndex(isEditing ? 0 : 1)      // front only on top when not editing
+                .onAppear {
+                    print("🔍 MPCPad FRONT: appeared, isEditing=\(isEditing), allowsHitTesting=\(!isEditing)")
+                }
                 .opacity(isEditing ? 0 : 1)
                 .rotation3DEffect(.degrees(isEditing ? 180 : 0),
                                   axis: (x: 0, y: 1, z: 0))
-                .overlay(
-                    // Tap flash overlay
-                    Rectangle()
-                        .fill(Color.red.opacity(tapFlash ? 0.3 : 0))
-                        .animation(.easeOut(duration: 0.2), value: tapFlash)
-                        .onChange(of: tapFlash) { _, newValue in
-                            if newValue {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                    tapFlash = false
-                                }
-                            }
-                        }
-                )
             .overlay(alignment: .topTrailing) {
                 Circle()
                     .fill(pad.hasSample ? pad.accent.opacity(0.9) : Color.clear)
@@ -63,7 +57,7 @@ struct MPCPadCard: View {
                         .foregroundStyle(T.textSecondary)
 
                     HStack(spacing: 10) {
-                        Button(pad.hasSample ? "*" : "+") {
+                        Button(pad.hasSample ? "Replace" : "Load from Files") {
                             showPicker = true
                         }
                         .buttonStyle(.beatle(accent: pad.accent))
@@ -78,6 +72,9 @@ struct MPCPadCard: View {
             .frame(width: size, height: size)
             .allowsHitTesting(isEditing)     // 🔑 enable touch on back when editing
             .zIndex(isEditing ? 1 : 0)      // back on top when editing
+            .onAppear {
+                print("🔍 MPCPad BACK: appeared, isEditing=\(isEditing), allowsHitTesting=\(isEditing)")
+            }
             .rotation3DEffect(.degrees(isEditing ? 0 : -180), axis: (x: 0, y: 1, z: 0))
             .opacity(isEditing ? 1 : 0)
         }
@@ -88,6 +85,12 @@ struct MPCPadCard: View {
             }
         }
         .accessibilityElement(children: .combine)
+        .onAppear {
+            print("🔍 MPCPadCard appeared for pad \(pad.id) - hasSample: \(pad.hasSample), storedURL: \(pad.storedURL?.lastPathComponent ?? "nil")")
+        }
+        .onChange(of: pad.hasSample) { _, newValue in
+            print("🔄 MPCPadCard pad \(pad.id) hasSample changed to: \(newValue)")
+        }
     }
 }
 

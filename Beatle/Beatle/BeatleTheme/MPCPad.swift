@@ -14,7 +14,7 @@ public struct MPCPad: View {
     private var glowSpread: CGFloat { max(6, size * 0.06) }
     private var glowOffsetY: CGFloat { max(4, size * 0.08) }
 
-    @GestureState private var pressing = false
+    @State private var pressing = false
     @State private var tapped = false
 
     public init(size: CGFloat = 140, accent: Color? = nil, isActive: Bool = true, action: (() -> Void)? = nil) {
@@ -74,20 +74,28 @@ public struct MPCPad: View {
         }
         .frame(width: size, height: size)
         .contentShape(RoundedRectangle(cornerRadius: corner))
-        // keep press visual but don't consume the tap
+        // Trigger audio on press for low latency - allow rapid triggering
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
-                .updating($pressing) { _, state, _ in
-                    if !state {
-                        state = true
+                .onChanged { _ in
+                    if !pressing {
+                        pressing = true
+                        print("🎯 MPCPad.onPress: Pad pressed!")
                         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+                        
+                        print("🎯 MPCPad.onPress: Calling action...")
+                        action?()
+                        print("🎯 MPCPad.onPress: Action called")
                     }
                 }
+                .onEnded { _ in
+                    pressing = false
+                }
         )
+        // Visual tap feedback for release
         .onTapGesture {
+            print("🎯 MPCPad.onTapGesture: Pad tapped!")
             tapped = true
-            UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
-            action?()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { tapped = false }
         }
         .accessibilityLabel("Drum pad")

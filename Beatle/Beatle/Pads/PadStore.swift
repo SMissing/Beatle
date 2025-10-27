@@ -26,26 +26,70 @@ final class PadStore: ObservableObject {
     }
 
     func loadFromDisk() {
-        // Audio functionality removed - ready for new implementation
-        // This could be reimplemented to load pad metadata without audio processing
-        print("📱 PadStore: Audio functionality removed, ready for new implementation")
+        let dtos = PadStateStore.load()
+        
+        // Process saved DTOs if they exist
+        if !dtos.isEmpty {
+            for dto in dtos {
+                if let i = pads.firstIndex(where: { $0.id == dto.id }) {
+                    pads[i].name = dto.name
+                    pads[i].accentHex = dto.accentHex
+                    
+                    // Only restore URL if file actually exists
+                    if let storedPath = dto.storedPath {
+                        let url = URL(fileURLWithPath: storedPath)
+                        if FileManager.default.fileExists(atPath: url.path) {
+                            pads[i].storedURL = url
+                            AudioEngineService.shared.loadSample(pad: dto.id, url: url)
+                            print("🔄 Restored pad \(dto.id) from disk: \(url.lastPathComponent)")
+                        } else {
+                            print("🛑 File not found for pad \(dto.id): \(storedPath)")
+                            // Clear the stored URL since file doesn't exist
+                            pads[i].storedURL = nil
+                            pads[i].name = "Empty"
+                            // Try to load bundled sample as fallback
+                            loadBundledSampleForPad(dto.id)
+                        }
+                    } else {
+                        pads[i].storedURL = nil
+                        // Try to load bundled sample for empty pads
+                        loadBundledSampleForPad(dto.id)
+                    }
+                }
+            }
+        } else {
+            // No saved DTOs - load bundled samples for all pads
+            print("🔄 No saved pad data found, loading bundled samples for all pads")
+            for padId in 0..<8 {
+                loadBundledSampleForPad(padId)
+            }
+        }
     }
 
     func importSample(for id: Int, from pickedURL: URL) {
-        // Audio functionality removed - ready for new implementation
-        // This could be reimplemented to handle file import without audio processing
-        print("📱 Import functionality removed, ready for new implementation")
-        
-        // For now, just update the UI to show a placeholder
-        if let i = pads.firstIndex(where: { $0.id == id }) {
-            pads[i].name = pickedURL.lastPathComponent
-            pads[i].storedURL = pickedURL
+        Task {
+            do {
+                let stored = try await SampleLibrary.importSample(forPad: id, from: pickedURL)
+                // ✅ Always update the pad to point to the latest converted WAV
+                if let i = pads.firstIndex(where: { $0.id == id }) {
+                    pads[i].storedURL = stored
+                    pads[i].name = stored.lastPathComponent
+                    // reload into engine right now (only if file exists)
+                    if FileManager.default.fileExists(atPath: stored.path) {
+                        AudioEngineService.shared.loadSample(pad: id, url: stored)
+                        print("🔄 Pad \(id) linked to new file:", stored.path)
+                    } else {
+                        print("🛑 Imported file does not exist:", stored.path)
+                    }
+                }
+            } catch {
+                print("🛑 Import failed:", error.localizedDescription)
+            }
         }
     }
 
     func clearSample(for id: Int) {
-        // Audio functionality removed - ready for new implementation
-        // This could be reimplemented to handle file cleanup without audio processing
+        do { try SampleLibrary.clearSamples(forPad: id) } catch { print(error) }
         if let i = pads.firstIndex(where: { $0.id == id }) {
             pads[i].storedURL = nil
             pads[i].name = "Empty"
@@ -53,8 +97,47 @@ final class PadStore: ObservableObject {
     }
     
     private func loadBundledSampleForPad(_ padId: Int) {
-        // Audio functionality removed - ready for new implementation
-        // This could be reimplemented to handle bundled resources without audio processing
-        print("📱 Bundled sample loading removed, ready for new implementation")
+        guard (0..<8).contains(padId) else { return }
+        
+        let baseName = "\(padId + 1)" // Convert pad ID to sample name (1-8)
+        let exts = ["wav", "aif", "aiff"]
+        
+        for ext in exts {
+            // Try BundledSamples subdirectory first (where AudioEngineService finds them)
+            if let url = Bundle.main.url(forResource: baseName, withExtension: ext, subdirectory: "BundledSamples") {
+                // Update the pad store
+                if let i = pads.firstIndex(where: { $0.id == padId }) {
+                    pads[i].storedURL = url
+                    pads[i].name = url.lastPathComponent
+                    print("🔄 Pad \(padId) loaded bundled sample: \(url.lastPathComponent)")
+                    print("🔄 Pad \(padId) hasSample: \(pads[i].hasSample)")
+                    
+                    // Load into audio engine
+                    AudioEngineService.shared.loadSample(pad: padId, url: url)
+                }
+                
+                return
+            }
+        }
+        
+        // Fallback to root bundle if not found in subdirectory
+        for ext in exts {
+            if let url = Bundle.main.url(forResource: baseName, withExtension: ext) {
+                // Update the pad store
+                if let i = pads.firstIndex(where: { $0.id == padId }) {
+                    pads[i].storedURL = url
+                    pads[i].name = url.lastPathComponent
+                    print("🔄 Pad \(padId) loaded bundled sample (fallback): \(url.lastPathComponent)")
+                    print("🔄 Pad \(padId) hasSample: \(pads[i].hasSample)")
+                    
+                    // Load into audio engine
+                    AudioEngineService.shared.loadSample(pad: padId, url: url)
+                }
+                
+                return
+            }
+        }
+        
+        print("⚠️ No bundled sample found for pad \(padId)")
     }
 }

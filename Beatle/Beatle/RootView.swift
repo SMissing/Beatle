@@ -21,7 +21,10 @@ struct RootView: View {
         .useBeatleTheme()
         .safeAreaInset(edge: .bottom) { BeatleTabBar(tab: $tab) }
         .onAppear {
-            padStore.loadFromDisk() // ⬅️ restore pad metadata on launch
+            // Start audio engine first
+            AudioEngineService.shared.start()
+            // Then restore pad metadata on launch
+            padStore.loadFromDisk()
         }
     }
 }
