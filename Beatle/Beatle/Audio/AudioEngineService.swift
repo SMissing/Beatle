@@ -264,8 +264,17 @@ final class AudioEngineService: ObservableObject {
     }
 
     // MARK: Trigger & Self-Test
-    func triggerPad(_ index: Int) {
-        print("🎵 AUDIO TRIGGER: triggerPad called for pad \(index)")
+    
+    /// Current pad configurations - managed by PadStore
+    var padConfigs: [Int: (playbackMode: PlaybackMode, chokeGroup: Int, gain: Float, pitch: Int)] = [:]
+    private var activePad: Int? = nil // For gate mode
+    
+    func updatePadConfig(id: Int, playbackMode: PlaybackMode, chokeGroup: Int, gain: Float, pitch: Int) {
+        padConfigs[id] = (playbackMode, chokeGroup, gain, pitch)
+    }
+    
+    func triggerPad(_ index: Int, isDown: Bool = true) {
+        print("🎵 AUDIO TRIGGER: triggerPad called for pad \(index), isDown=\(isDown)")
         print("🎵 ENGINE STATE: isRunning=\(engine.avEngine.isRunning), started=\(started)")
         
         guard engine.avEngine.isRunning else { 
@@ -283,26 +292,60 @@ final class AudioEngineService: ObservableObject {
             return
         }
         
-        print("✅ AUDIO TRIGGER: Player and buffer exist for pad \(index)")
-        print("🎵 PLAYER STATE: volume=\(player.volume), isLooping=\(player.isLooping)")
-        print("🎵 PLAYER ENGINE: hasEngine=\(player.avAudioNode.engine != nil)")
+        // Get pad config
+        let config = padConfigs[index] ?? (.oneShot, 0, 1.0, 0)
         
-        if let buffer = padBuffers[index] {
-            print("🎵 BUFFER INFO: frameLength=\(buffer.frameLength), sampleRate=\(buffer.format.sampleRate)")
+        // Handle choke groups
+        if config.chokeGroup > 0 {
+            for (i, otherPlayer) in padPlayers.enumerated() {
+                if i != index, let player = otherPlayer, let otherConfig = padConfigs[i] {
+                    if otherConfig.chokeGroup == config.chokeGroup {
+                        print("🎵 CHOKE: Stopping pad \(i) (same group)")
+                        player.stop()
+                    }
+                }
+            }
         }
         
-        print("🎵 STOPPING PLAYER...")
-        player.stop()
-        
-        print("🎵 STARTING PLAYBACK...")
-        player.play()
-        
-        print("🎵 PLAYBACK RESULT: isPlaying=\(player.isPlaying)")
-        
-        // Additional verification
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            print("🎵 PLAYBACK CHECK: isPlaying=\(player.isPlaying) after 100ms")
+        if isDown {
+            // Start playback
+            print("✅ AUDIO TRIGGER: Starting playback for pad \(index)")
+            print("🎵 PLAYER STATE: mode=\(config.playbackMode), choke=\(config.chokeGroup)")
+            
+            player.volume = config.gain
+            
+            print("🎵 STOPPING PLAYER...")
+            player.stop()
+            
+            print("🎵 STARTING PLAYBACK...")
+            player.play()
+            
+            print("🎵 PLAYBACK RESULT: isPlaying=\(player.isPlaying)")
+            
+            activePad = index
+            
+            // Additional verification
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                print("🎵 PLAYBACK CHECK: isPlaying=\(player.isPlaying) after 100ms")
+            }
+        } else {
+            // Gate mode - stop on finger up (only for gate mode)
+            if config.playbackMode == .gate {
+                print("🎵 GATE: Stopping pad \(index) on finger up")
+                player.stop()
+                if activePad == index {
+                    activePad = nil
+                }
+            }
         }
+    }
+    
+    /// Release pad (finger up)
+    func releasePad(_ index: Int) {
+        guard let config = padConfigs[index], config.playbackMode == .gate else {
+            return
+        }
+        triggerPad(index, isDown: false)
     }
 
     func selfTestPads() {

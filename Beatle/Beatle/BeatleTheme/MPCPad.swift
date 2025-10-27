@@ -7,6 +7,7 @@ public struct MPCPad: View {
     var accent: Color
     var isActive: Bool = true
     var action: (() -> Void)? = nil
+    var releaseAction: (() -> Void)? = nil // For gate mode
 
     // visual tuning
     private var lift: CGFloat { max(4, size * 0.02) }
@@ -17,11 +18,12 @@ public struct MPCPad: View {
     @State private var pressing = false
     @State private var tapped = false
 
-    public init(size: CGFloat = 140, accent: Color? = nil, isActive: Bool = true, action: (() -> Void)? = nil) {
+    public init(size: CGFloat = 140, accent: Color? = nil, isActive: Bool = true, action: (() -> Void)? = nil, releaseAction: (() -> Void)? = nil) {
         self.size = size
         self.accent = accent ?? Color(hex: "#52B3B6")
         self.isActive = isActive
         self.action = action
+        self.releaseAction = releaseAction
     }
 
     public var body: some View {
@@ -90,6 +92,8 @@ public struct MPCPad: View {
                 }
                 .onEnded { _ in
                     pressing = false
+                    print("🎯 MPCPad.onEnded: Pad released!")
+                    releaseAction?()
                 }
         )
         // Visual tap feedback for release

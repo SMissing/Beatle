@@ -4,6 +4,9 @@ struct PadsPage: View {
     @Environment(\.beatle) private var T
     @EnvironmentObject private var store: PadStore
     @State private var isEditing = false
+    @State private var editingPad: Pad? = nil
+    
+    init() {}
 
     private let horizontalPadding: CGFloat = 24
     private let interColumn: CGFloat = 16
@@ -36,8 +39,13 @@ struct PadsPage: View {
 
                 LazyVGrid(columns: columns, alignment: .center, spacing: interRow) {
                     ForEach(store.pads) { pad in
-                        MPCPadCard(pad: pad, size: padSize, isEditing: isEditing)
-                            .environmentObject(store)
+                        MPCPadCard(
+                            pad: pad,
+                            size: padSize,
+                            isEditing: isEditing,
+                            onEditTap: { editingPad = pad }
+                        )
+                        .environmentObject(store)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -45,6 +53,21 @@ struct PadsPage: View {
 
                 Spacer(minLength: bottomSpacing)
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("BeatlePadEditModeToggle"))) { _ in
+            withAnimation {
+                isEditing.toggle()
+            }
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        }
+        .sheet(item: $editingPad) { pad in
+            PadEditorView(pad: Binding(
+                get: { pad },
+                set: { newPad in
+                    store.updatePad(newPad)
+                }
+            ))
+            .environmentObject(store)
         }
     }
 }

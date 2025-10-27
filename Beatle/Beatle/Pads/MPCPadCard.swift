@@ -7,7 +7,15 @@ struct MPCPadCard: View {
     let pad: Pad
     let size: CGFloat
     let isEditing: Bool
+    let onEditTap: (() -> Void)?
     @State private var showPicker = false
+    
+    init(pad: Pad, size: CGFloat, isEditing: Bool, onEditTap: (() -> Void)? = nil) {
+        self.pad = pad
+        self.size = size
+        self.isEditing = isEditing
+        self.onEditTap = onEditTap
+    }
 
     var body: some View {
         ZStack {
@@ -23,7 +31,24 @@ struct MPCPadCard: View {
                            return 
                        }
                        print("✅ PAD PRESSED: Sample exists, triggering audio...")
-                       AudioEngineService.shared.triggerPad(pad.id)
+                       
+                       // Update engine with current pad config
+                       AudioEngineService.shared.updatePadConfig(
+                           id: pad.id,
+                           playbackMode: pad.playbackMode,
+                           chokeGroup: pad.chokeGroup,
+                           gain: pad.gain,
+                           pitch: pad.pitch
+                       )
+                       
+                       AudioEngineService.shared.triggerPad(pad.id, isDown: true)
+                   },
+                   releaseAction: {
+                       // Gate mode - release on finger up
+                       if pad.playbackMode == .gate {
+                           print("🎯 PAD RELEASED: Stopping gate playback for pad \(pad.id)")
+                           AudioEngineService.shared.releasePad(pad.id)
+                       }
                    })
                 .contentShape(Rectangle())
                 .allowsHitTesting(!isEditing)   // 🔑 disable touch on front when editing
@@ -47,7 +72,7 @@ struct MPCPadCard: View {
                 }
             }
 
-            // BACK (loader face)
+            // BACK (edit face)
             BeatlePanel {
                 VStack(spacing: 10) {
                     Text(pad.name)
@@ -55,25 +80,43 @@ struct MPCPadCard: View {
                         .lineLimit(1)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .foregroundStyle(T.textSecondary)
-
-                    HStack(spacing: 10) {
-                        Button(pad.hasSample ? "Replace" : "Load from Files") {
-                            showPicker = true
-                        }
-                        .buttonStyle(.beatle(accent: pad.accent))
-
+                    
+                    // Show mode and choke group
+                    HStack(spacing: 6) {
                         if pad.hasSample {
-                            Button("Clear") { store.clearSample(for: pad.id) }
-                                .buttonStyle(.beatle(accent: T.keycapAlt))
+                            Text(pad.playbackMode == .oneShot ? "OS" : "GT")
+                                .font(BeatleFont.caption)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(T.surface)
+                                .cornerRadius(4)
+                            
+                            if pad.chokeGroup > 0 {
+                                Text("C\(pad.chokeGroup)")
+                                    .font(BeatleFont.caption)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(T.surface)
+                                    .cornerRadius(4)
+                            }
                         }
                     }
+                    
+                    // Color dot
+                    Circle()
+                        .fill(pad.accent)
+                        .frame(width: 12, height: 12)
                 }
             }
             .frame(width: size, height: size)
-            .allowsHitTesting(isEditing)     // 🔑 enable touch on back when editing
-            .zIndex(isEditing ? 1 : 0)      // back on top when editing
-            .onAppear {
-                print("🔍 MPCPad BACK: appeared, isEditing=\(isEditing), allowsHitTesting=\(isEditing)")
+            .allowsHitTesting(isEditing)
+            .zIndex(isEditing ? 1 : 0)
+            .onTapGesture {
+                if pad.hasSample {
+                    onEditTap?()
+                } else {
+                    showPicker = true
+                }
             }
             .rotation3DEffect(.degrees(isEditing ? 0 : -180), axis: (x: 0, y: 1, z: 0))
             .opacity(isEditing ? 1 : 0)

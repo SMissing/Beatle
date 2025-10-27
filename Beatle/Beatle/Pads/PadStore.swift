@@ -1,13 +1,39 @@
 import SwiftUI
 import Combine
 
-struct Pad: Identifiable, Equatable {
+enum PlaybackMode: String, Codable {
+    case oneShot = "oneShot"
+    case gate = "gate"
+}
+
+struct Pad: Identifiable, Equatable, Codable {
     let id: Int
     var name: String = "Empty"
     var accentHex: String
     var storedURL: URL? = nil
     var hasSample: Bool { storedURL != nil }
     var accent: Color { Color(hex: accentHex) }
+    
+    // New properties
+    var playbackMode: PlaybackMode = .oneShot
+    var chokeGroup: Int = 0 // 0 = None, 1-4 = group
+    var gain: Float = 1.0 // 0.0 to 1.5
+    var pitch: Int = 0 // -12 to +12 semitones
+    var isFavourite: Bool = false
+    
+    init(id: Int, accentHex: String, name: String = "Empty", storedURL: URL? = nil,
+         playbackMode: PlaybackMode = .oneShot, chokeGroup: Int = 0, gain: Float = 1.0,
+         pitch: Int = 0, isFavourite: Bool = false) {
+        self.id = id
+        self.accentHex = accentHex
+        self.name = name
+        self.storedURL = storedURL
+        self.playbackMode = playbackMode
+        self.chokeGroup = chokeGroup
+        self.gain = gain
+        self.pitch = pitch
+        self.isFavourite = isFavourite
+    }
 }
 
 @MainActor
@@ -22,10 +48,35 @@ final class PadStore: ObservableObject {
         Pad(id: 6, accentHex: "#EC2F3B"),
         Pad(id: 7, accentHex: "#FF9B5A"),
     ] {
-        didSet { PadStateStore.save(pads) }
+        didSet { saveKit() }
+    }
+    
+    func updatePad(_ pad: Pad) {
+        if let index = pads.firstIndex(where: { $0.id == pad.id }) {
+            pads[index] = pad
+        }
+    }
+    
+    private func saveKit() {
+        Task {
+            do {
+                guard let currentKit = KitService.shared.currentKit else {
+                    // Create new kit if none exists
+                    let kit = Kit(name: "Default Kit", pads: pads)
+                    try await KitService.shared.save(kit)
+                    return
+                }
+                
+                var updatedKit = currentKit
+                updatedKit.pads = pads
+                try await KitService.shared.save(updatedKit)
+            } catch {
+                print("Failed to save kit: \(error)")
+            }
+        }
     }
 
-    func loadFromDisk() {
+    func loadFromDisk() async {
         let dtos = PadStateStore.load()
         
         // Process saved DTOs if they exist
@@ -63,6 +114,17 @@ final class PadStore: ObservableObject {
             for padId in 0..<8 {
                 loadBundledSampleForPad(padId)
             }
+        }
+        
+        // Sync pad configs to audio engine
+        for pad in pads {
+            AudioEngineService.shared.updatePadConfig(
+                id: pad.id,
+                playbackMode: pad.playbackMode,
+                chokeGroup: pad.chokeGroup,
+                gain: pad.gain,
+                pitch: pad.pitch
+            )
         }
     }
 
