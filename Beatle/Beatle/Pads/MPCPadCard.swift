@@ -57,8 +57,6 @@ struct MPCPadCard: View {
                     print("🔍 MPCPad FRONT: appeared, isEditing=\(isEditing), allowsHitTesting=\(!isEditing)")
                 }
                 .opacity(isEditing ? 0 : 1)
-                .rotation3DEffect(.degrees(isEditing ? 180 : 0),
-                                  axis: (x: 0, y: 1, z: 0))
             .overlay(alignment: .topTrailing) {
                 Circle()
                     .fill(pad.hasSample ? pad.accent.opacity(0.9) : Color.clear)
@@ -118,10 +116,9 @@ struct MPCPadCard: View {
                     showPicker = true
                 }
             }
-            .rotation3DEffect(.degrees(isEditing ? 0 : -180), axis: (x: 0, y: 1, z: 0))
             .opacity(isEditing ? 1 : 0)
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: isEditing)
+        .animation(nil, value: isEditing)
         .sheet(isPresented: $showPicker) {
             SingleDocumentPicker { url in
                 store.importSample(for: pad.id, from: url)

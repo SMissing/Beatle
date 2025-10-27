@@ -16,6 +16,8 @@ public struct BeatleTabBar: View {
             segment(.pads)   { PadGlyph(size: 20) }
             DividerView(color: divider)
             segment(.synth)  { Image(systemName: "waveform") }
+            DividerView(color: divider)
+            segment(.library) { Image(systemName: "books.vertical") }
         }
         .frame(maxWidth: .infinity, minHeight: 64)
         .background(

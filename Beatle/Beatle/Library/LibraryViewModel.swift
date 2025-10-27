@@ -98,12 +98,10 @@ final class LibraryViewModel: ObservableObject {
             if let existing = sampleIndex.findSample(byContentHash: hash) {
                 // Duplicate found - create a link to it
                 let linkedSample = Sample(
-                    id: UUID().uuidString,
                     name: "\(existing.name) (copy)",
                     url: existing.url,
                     folderId: folderId,
                     isStarred: existing.isStarred,
-                    createdAt: Date(),
                     duration: existing.duration,
                     sampleRate: existing.sampleRate,
                     channels: existing.channels,

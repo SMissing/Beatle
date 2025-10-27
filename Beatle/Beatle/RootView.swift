@@ -1,6 +1,6 @@
 import SwiftUI
 
-public enum BeatleTab { case record, pads, synth }
+public enum BeatleTab { case record, pads, synth, library }
 
 struct RootView: View {
     @Environment(\.beatle) private var T
@@ -13,6 +13,7 @@ struct RootView: View {
             case .record: RecorderPage().environmentObject(padStore)
             case .pads:   PadsPage().environmentObject(padStore)
             case .synth:  SynthPage().environmentObject(padStore)
+            case .library: LibraryTabView()
             }
             SettingsButton()
                 .padding(.leading, 16).padding(.top, 12)
@@ -39,17 +40,25 @@ struct BeatleTabBarWithTap: View {
     @State private var lastTapTime: [BeatleTab: Date] = [:]
     
     var body: some View {
-        BeatleTabBar(tab: $selectedTab)
-            .onChange(of: selectedTab) { oldValue, newValue in
-                if newValue == .pads {
-                    // Check if this is a re-tap (within 0.5 seconds)
+        BeatleTabBar(tab: Binding(
+            get: { selectedTab },
+            set: { newTab in
+                let oldTab = selectedTab
+                
+                // Check if this is a re-tap on the pads tab (within 0.5 seconds)
+                if newTab == .pads && oldTab == .pads {
                     if let lastTime = lastTapTime[.pads],
                        Date().timeIntervalSince(lastTime) < 0.5 {
-                        // Re-tap detected - notify PadsPage
+                        // Re-tap detected - toggle edit mode
                         NotificationCenter.default.post(name: NSNotification.Name("BeatlePadEditModeToggle"), object: nil)
+                        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                        return // Don't change tab
                     }
-                    lastTapTime[.pads] = Date()
                 }
+                
+                selectedTab = newTab
+                lastTapTime[newTab] = Date()
             }
+        ))
     }
 }

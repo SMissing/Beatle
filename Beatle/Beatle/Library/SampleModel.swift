@@ -34,28 +34,36 @@ struct Sample: Identifiable, Codable {
     // Display
     var displayName: String { name }
     
-    init(id: String = UUID().uuidString,
-         name: String,
+    init(name: String,
          url: URL,
          folderId: String? = nil,
          isStarred: Bool = false,
-         createdAt: Date = Date(),
          duration: TimeInterval = 0,
          sampleRate: Double = 48000,
          channels: Int = 1,
          fileSize: Int64 = 0,
          contentHash: String = "") {
-        self.id = id
+        self.id = contentHash.isEmpty ? UUID().uuidString : contentHash
         self.name = name
         self.url = url
         self.folderId = folderId
         self.isStarred = isStarred
-        self.createdAt = createdAt
+        self.createdAt = Date()
         self.duration = duration
         self.sampleRate = sampleRate
         self.channels = channels
         self.fileSize = fileSize
         self.contentHash = contentHash
+    }
+}
+
+extension Sample: Hashable {
+    static func == (lhs: Sample, rhs: Sample) -> Bool {
+        lhs.id == rhs.id
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }
 

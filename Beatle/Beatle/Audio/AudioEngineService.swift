@@ -22,6 +22,7 @@ final class AudioEngineService: ObservableObject {
     // Audio players and buffers for each pad
     private var padPlayers: [AudioPlayer?] = Array(repeating: nil, count: 8)
     private var padBuffers: [AVAudioPCMBuffer?] = Array(repeating: nil, count: 8)
+    private var padTimePitchNodes: [TimePitch?] = Array(repeating: nil, count: 8)
 
     private var started = false
 
@@ -188,9 +189,16 @@ final class AudioEngineService: ObservableObject {
             let currentSR = existing.avAudioNode.outputFormat(forBus: 0).sampleRate
             if currentSR != processingFormat.sampleRate {
                 // Rebuild the player at 48k
-                padMixers[index].removeInput(existing)       // detach from graph
+                if let timePitch = padTimePitchNodes[index] {
+                    padMixers[index].removeInput(timePitch)
+                    padTimePitchNodes[index] = nil
+                } else {
+                    padMixers[index].removeInput(existing)
+                }
                 let newPlayer = AudioPlayer()
-                padMixers[index].addInput(newPlayer)         // AudioKit graph attach/connect
+                let timePitch = TimePitch(newPlayer)
+                padMixers[index].addInput(timePitch)
+                padTimePitchNodes[index] = timePitch
                 padPlayers[index] = newPlayer
                 player = newPlayer
                 print("🔧 Recreated pad \(index) player at 48k (was \(currentSR))")
@@ -202,7 +210,12 @@ final class AudioEngineService: ObservableObject {
             // Fresh player
             let p = AudioPlayer()
             padPlayers[index] = p
-            padMixers[index].addInput(p)                     // AudioKit graph attach/connect
+            
+            // Create TimePitch node for pitch shifting
+            let timePitch = TimePitch(p)
+            padTimePitchNodes[index] = timePitch
+            padMixers[index].addInput(timePitch)             // AudioKit graph attach/connect
+            
             player = p
             print("🔧 Created new player for pad \(index)")
         }
@@ -262,6 +275,23 @@ final class AudioEngineService: ObservableObject {
             print("🛑 Failed to load user sample for pad \(id):", error)
         }
     }
+    
+    func clearPad(_ id: Int) {
+        guard (0..<8).contains(id) else { return }
+        padBuffers[id] = nil
+        if let player = padPlayers[id] {
+            player.stop()
+            if let timePitch = padTimePitchNodes[id] {
+                padMixers[id].removeInput(timePitch)
+                padTimePitchNodes[id] = nil
+            } else {
+                padMixers[id].removeInput(player)
+            }
+            padPlayers[id] = nil
+        }
+        padConfigs.removeValue(forKey: id)
+        print("✅ Cleared pad \(id)")
+    }
 
     // MARK: Trigger & Self-Test
     
@@ -312,7 +342,14 @@ final class AudioEngineService: ObservableObject {
             print("✅ AUDIO TRIGGER: Starting playback for pad \(index)")
             print("🎵 PLAYER STATE: mode=\(config.playbackMode), choke=\(config.chokeGroup)")
             
+            // Apply gain
             player.volume = config.gain
+            
+            // Apply pitch using TimePitch node
+            if let timePitch = padTimePitchNodes[index] {
+                timePitch.pitch = Float(config.pitch)
+                print("🎵 PITCH: \(config.pitch) semitones applied")
+            }
             
             print("🎵 STOPPING PLAYER...")
             player.stop()

@@ -80,6 +80,13 @@ struct PadEditorView: View {
                             Button {
                                 pad.playbackMode = mode
                                 store.updatePad(pad)
+                                AudioEngineService.shared.updatePadConfig(
+                                    id: pad.id,
+                                    playbackMode: pad.playbackMode,
+                                    chokeGroup: pad.chokeGroup,
+                                    gain: pad.gain,
+                                    pitch: pad.pitch
+                                )
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             } label: {
                                 Text(mode == .oneShot ? "One-shot" : "Gate")
@@ -105,6 +112,13 @@ struct PadEditorView: View {
                             Button {
                                 pad.chokeGroup = group
                                 store.updatePad(pad)
+                                AudioEngineService.shared.updatePadConfig(
+                                    id: pad.id,
+                                    playbackMode: pad.playbackMode,
+                                    chokeGroup: pad.chokeGroup,
+                                    gain: pad.gain,
+                                    pitch: pad.pitch
+                                )
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             } label: {
                                 Text(group == 0 ? "None" : "\(group)")
@@ -136,6 +150,13 @@ struct PadEditorView: View {
                         set: { newValue in
                             pad.gain = Float(newValue.clamped(to: 0.0...1.5))
                             store.updatePad(pad)
+                            AudioEngineService.shared.updatePadConfig(
+                                id: pad.id,
+                                playbackMode: pad.playbackMode,
+                                chokeGroup: pad.chokeGroup,
+                                gain: pad.gain,
+                                pitch: pad.pitch
+                            )
                         }
                     ), in: 0...1.5)
                     .tint(T.coral)
@@ -157,6 +178,13 @@ struct PadEditorView: View {
                         Button("-12") {
                             pad.pitch = max(-12, pad.pitch - 12)
                             store.updatePad(pad)
+                            AudioEngineService.shared.updatePadConfig(
+                                id: pad.id,
+                                playbackMode: pad.playbackMode,
+                                chokeGroup: pad.chokeGroup,
+                                gain: pad.gain,
+                                pitch: pad.pitch
+                            )
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         }
                         .buttonStyle(.beatle(accent: T.keycapAlt))
@@ -164,6 +192,13 @@ struct PadEditorView: View {
                         Button("−") {
                             pad.pitch = max(-12, pad.pitch - 1)
                             store.updatePad(pad)
+                            AudioEngineService.shared.updatePadConfig(
+                                id: pad.id,
+                                playbackMode: pad.playbackMode,
+                                chokeGroup: pad.chokeGroup,
+                                gain: pad.gain,
+                                pitch: pad.pitch
+                            )
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         }
                         .buttonStyle(.beatle(accent: T.keycapAlt))
@@ -176,6 +211,13 @@ struct PadEditorView: View {
                         Button("+") {
                             pad.pitch = min(12, pad.pitch + 1)
                             store.updatePad(pad)
+                            AudioEngineService.shared.updatePadConfig(
+                                id: pad.id,
+                                playbackMode: pad.playbackMode,
+                                chokeGroup: pad.chokeGroup,
+                                gain: pad.gain,
+                                pitch: pad.pitch
+                            )
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         }
                         .buttonStyle(.beatle(accent: T.keycapAlt))
@@ -183,6 +225,13 @@ struct PadEditorView: View {
                         Button("+12") {
                             pad.pitch = min(12, pad.pitch + 12)
                             store.updatePad(pad)
+                            AudioEngineService.shared.updatePadConfig(
+                                id: pad.id,
+                                playbackMode: pad.playbackMode,
+                                chokeGroup: pad.chokeGroup,
+                                gain: pad.gain,
+                                pitch: pad.pitch
+                            )
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         }
                         .buttonStyle(.beatle(accent: T.keycapAlt))
@@ -211,6 +260,13 @@ struct PadEditorView: View {
         .onChange(of: selectedColorHex) { _, newValue in
             pad.accentHex = newValue
             store.updatePad(pad)
+            AudioEngineService.shared.updatePadConfig(
+                id: pad.id,
+                playbackMode: pad.playbackMode,
+                chokeGroup: pad.chokeGroup,
+                gain: pad.gain,
+                pitch: pad.pitch
+            )
         }
         .sheet(isPresented: $showSamplePicker) {
             SingleDocumentPicker { url in

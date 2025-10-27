@@ -54,6 +54,14 @@ final class PadStore: ObservableObject {
     func updatePad(_ pad: Pad) {
         if let index = pads.firstIndex(where: { $0.id == pad.id }) {
             pads[index] = pad
+            // Sync to audio engine
+            AudioEngineService.shared.updatePadConfig(
+                id: pad.id,
+                playbackMode: pad.playbackMode,
+                chokeGroup: pad.chokeGroup,
+                gain: pad.gain,
+                pitch: pad.pitch
+            )
         }
     }
     
